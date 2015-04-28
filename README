@@ -1,4 +1,10 @@
-This is your new Play application
-=================================
+Vote for Pizza
+==============
 
-This file will be packaged with your application, when using `activator dist`.
+An app for voting for things.
+
+Depends on scala Play and my SingleTransferableVote package available at https://github.com/MatMoore/SingleTransferableVote
+
+To run the dev server, first check out SingleTransferableVote and run `sbt package-local`
+
+Now run `./activator` from this project.
