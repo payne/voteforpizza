@@ -3,11 +3,20 @@
 
 @main(title) {
     <h1>@title Ballot</h1>
+    @if(form.hasGlobalErrors) {
+    <p>My hovercraft is full of errors!</p>
+    <ul>
+        @for(error <- form.globalErrors) {
+            <li>@error.message</li>
+        }
+    </ul>
+    }
     @helper.form(action = routes.Application.vote(election)) {
         @for((candidate, idx) <- candidates.zipWithIndex) {
             @helper.input(form("preferences")("[" + idx + "]"), '_label -> candidate) { (id, name, value, args) =>
                 <input type="number" name="@name" id="@id" @toHtmlArgs(args) />
             }
         }
+        <input type="submit" value="Cast Vote"/>
     }
 }

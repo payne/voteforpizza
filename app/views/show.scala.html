@@ -1,7 +1,10 @@
-@(title:String, blurb: String, candidates: List[String])
+@(title:String, blurb: String, candidates: List[String])(implicit flash: Flash)
 
 @main(title) {
     <h1>@title</h1>
+    @for( msg <- flash.get("success")) {
+        <p>Woop woop: @msg</p>
+    }
     <p>@blurb</p>
     <ul>
     @for(candidate <- candidates) {

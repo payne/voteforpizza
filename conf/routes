@@ -6,7 +6,7 @@
 GET     /                           controllers.Application.index
 GET     /choice/:election/          controllers.Application.show(election: String)
 GET     /choice/:election/ballot    controllers.Application.showVoteForm(election: String)
-POST    /choice/:election/vote      controllers.Application.vote(election: String)
+POST    /choice/:election/ballot    controllers.Application.vote(election: String)
 POST    /choice/:election/count     controllers.Application.count(election: String)
 
 # Map static resources from the /public folder to the /assets URL path
