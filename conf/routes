@@ -4,10 +4,10 @@
 
 # Home page
 GET     /                           controllers.Application.index
-GET     /choice/:election/          controllers.Application.show(election: String)
-GET     /choice/:election/ballot    controllers.Application.showVoteForm(election: String)
-POST    /choice/:election/ballot    controllers.Application.vote(election: String)
-POST    /choice/:election/count     controllers.Application.count(election: String)
+GET     /choice/:election/          controllers.Application.show(election: Long)
+GET     /choice/:election/ballot    controllers.Application.showVoteForm(election: Long)
+POST    /choice/:election/ballot    controllers.Application.vote(election: Long)
+POST    /choice/:election/count     controllers.Application.count(election: Long)
 GET     /choice/                    controllers.Application.showNewElectionForm
 POST    /choice/                    controllers.Application.createElection
 

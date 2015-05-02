@@ -12,6 +12,7 @@ import play.api.i18n.Lang
 import anorm._
 import play.api.db.DB
 import play.api.Play.current
+import anorm.SqlParser._
 
 
 object Application extends Controller {
@@ -53,15 +54,31 @@ object Application extends Controller {
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def show(election: String) = Action { implicit request =>
-    Ok(views.html.show("Test Vote", "lorum ipsum", List("apples", "oranges")))
+  def show(election: Long) = Action { implicit request =>
+    val sql = SQL"""
+      select e.name, e.description, c.name as candidate
+      from Election e INNER JOIN Candidate c ON (e.Id = c.electionId)
+      where e.id = $election
+      order by random()
+    """
+    val rows = DB.withConnection {implicit c => sql().toList}
+    if(rows.isEmpty) {
+      NotFound
+    } else {
+      val first = rows.head
+      val name = first[String]("name")
+      val desc = first[String]("description")
+      val candidates = rows map (_("candidate"))
+      Ok(views.html.show(name, desc, candidates))
+    }
+
   }
 
-  def showVoteForm(election: String) = Action {
+  def showVoteForm(election: Long) = Action {
     Ok(views.html.voteForm(election, "Test Vote", candidates, voteForm))
   }
 
-  def vote(election: String) = Action { implicit request =>
+  def vote(election: Long) = Action { implicit request =>
     voteForm.bindFromRequest.fold(
       formWithErrors => {
         Logger.debug("Oh no")
@@ -76,7 +93,7 @@ object Application extends Controller {
     )
   }
 
-  def count(election: String) = TODO
+  def count(election: Long) = TODO
 
   def showNewElectionForm() = Action {
     Ok(views.html.electionForm(electionForm))
@@ -119,7 +136,7 @@ object Application extends Controller {
       value => {
         Logger.debug("Yay")
         val id = DB.withConnection {implicit c => insertElectionAndCandidates(value)}
-        Redirect(routes.Application.show(id.toString)).flashing("success" -> "Created new choice.")
+        Redirect(routes.Application.show(id)).flashing("success" -> "Created new choice.")
       }
     )}
 
