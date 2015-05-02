@@ -13,5 +13,6 @@ libraryDependencies ++= Seq(
   anorm,
   cache,
   ws,
+  "org.postgresql" % "postgresql" % "9.3-1103-jdbc41",
   "com.voteforpizza" %% "singletransferablevote" % "1.0"
 )
