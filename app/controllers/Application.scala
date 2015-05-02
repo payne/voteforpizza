@@ -1,5 +1,7 @@
 package controllers
 
+import java.sql.Connection
+
 import play.api._
 import play.api.data.validation.{Valid, Invalid, Constraint}
 import play.api.mvc._
@@ -7,6 +9,9 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.Logger
 import play.api.i18n.Lang
+import anorm._
+import play.api.db.DB
+import play.api.Play.current
 
 
 object Application extends Controller {
@@ -78,7 +83,34 @@ object Application extends Controller {
   }
 
   def createElection() = Action {implicit request =>
-     electionForm.bindFromRequest.fold(
+
+    def insertElection(name: String, description: String)(implicit c: Connection): Option[Long] = {
+      SQL"insert into Election(name, description) values($name, $description)".executeInsert()
+    }
+
+    def insertCandidates(candidates: List[String], electionId: Long)(implicit c: Connection): Array[Int] = {
+        BatchSql(
+          SQL("insert into Candidate(name, electionId) values ({name}, {eId})"),
+          for (candidate <- candidates)
+          yield Seq[NamedParameter]("name" -> candidate, "eId" -> electionId)
+        ).execute() // Throws SQLExceptions
+    }
+
+    def insertElectionAndCandidates(election: Election)(implicit c: Connection): Long = {
+      val insertedId: Option[Long] = insertElection(election.name, election.description)
+
+      insertedId match {
+        case Some(id) => {
+          insertCandidates(election.candidates, id)
+          id
+        }
+        case None => {
+          throw new Exception("Fuck it")
+        }
+      }
+    }
+
+    electionForm.bindFromRequest.fold(
       formWithErrors => {
         Logger.debug("Oh no")
         Logger.debug(formWithErrors.errorsAsJson(Lang("en")).toString)
@@ -86,7 +118,8 @@ object Application extends Controller {
       },
       value => {
         Logger.debug("Yay")
-        Redirect(routes.Application.show(value.name)).flashing("success" -> "Created new choice.")
+        val id = DB.withConnection {implicit c => insertElectionAndCandidates(value)}
+        Redirect(routes.Application.show(id.toString)).flashing("success" -> "Created new choice.")
       }
     )}
 
