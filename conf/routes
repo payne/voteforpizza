@@ -8,6 +8,8 @@ GET     /choice/:election/          controllers.Application.show(election: Strin
 GET     /choice/:election/ballot    controllers.Application.showVoteForm(election: String)
 POST    /choice/:election/ballot    controllers.Application.vote(election: String)
 POST    /choice/:election/count     controllers.Application.count(election: String)
+GET     /choice/                    controllers.Application.showNewElectionForm
+POST    /choice/                    controllers.Application.createElection
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

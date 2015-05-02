@@ -1,0 +1,43 @@
+@import Application._
+@(form: Form[Election])
+
+@main("New choice") {
+    <h1>New choice</h1>
+    @if(form.hasGlobalErrors) {
+    <p>My hovercraft is full of errors!</p>
+    <ul>
+        @for(error <- form.globalErrors) {
+            <li>@error.message</li>
+        }
+    </ul>
+    }
+    @helper.form(action = routes.Application.createElection) {
+        @helper.inputText(form("name"), '_label -> "Name")
+        @helper.textarea(form("description"), '_label -> "Description")
+        <fieldset>
+            <label>Options</label>
+            <div id="options">
+            @helper.repeat(form("candidates"), min = 2) { candidateField =>
+                @helper.inputText(candidateField, '_label -> "Name")
+            }
+            </div>
+            <button type="button" id="moreOption">+1</button>
+        </fieldset>
+        <input type="submit" value="Do the thing"/>
+    }
+}
+
+<script>
+    var more = document.querySelector('#moreOption');
+    var options = document.querySelector('#options');
+    var count = 2;
+    more.addEventListener('click', function() {
+        count += 1;
+        var first = document.querySelector('#candidates_0_field');
+        var clone = first.cloneNode(true);
+        clone.id = 'candidates_' + count + '_field';
+        clone.innerHTML = clone.innerHTML.replace(/candidates_0/g, 'candidates_' + count)
+            .replace(/candidates\[0\]/g, 'candidates[' + count + ']');
+        options.appendChild(clone);
+    });
+</script>
