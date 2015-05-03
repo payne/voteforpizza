@@ -2,6 +2,7 @@ package models
 
 import java.sql.Connection
 import anorm._
+import anorm.SqlParser.scalar
 
 /**
  * Methods to interact with the Postgres DB
@@ -18,8 +19,17 @@ object Persistance {
     sql().toList
   }
 
-  def insertBallot(name: String)(implicit c: Connection): Option[Long] = {
-      SQL"insert into Ballot(name) values($name)".executeInsert()
+  def selectVoters(election: Long)(implicit c: Connection): List[String] = {
+    val sql = SQL"""
+      select name
+      from ballot
+      where electionId = $election
+    """
+    sql.as(scalar[String].*)
+  }
+
+  def insertBallot(name: String, electionId: Long)(implicit c: Connection): Option[Long] = {
+      SQL"insert into Ballot(name, electionId) values($name, $electionId)".executeInsert()
   }
 
   def insertPreferences(ranking: Seq[(Int, Int)], ballotId: Long)(implicit c: Connection): Array[Int] = {

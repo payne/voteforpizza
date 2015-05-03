@@ -12,11 +12,15 @@
     </ul>
     }
     @helper.form(action = routes.Application.vote(election)) {
+        @helper.inputText(form("name"), '_label -> "Your Name")
+        <fieldset>
+            <p>Rank each option from 1 to @candidates.length.</p>
         @for((candidate, idx) <- candidates.zipWithIndex) {
             @helper.input(form("preferences")("[" + idx + "]"), '_label -> candidate) { (id, name, value, args) =>
                 <input type="number" name="@name" id="@id" @toHtmlArgs(args) />
             }
         }
+        </fieldset>
         <input type="submit" value="Cast Vote"/>
     }
 }

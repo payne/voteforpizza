@@ -1,4 +1,4 @@
-@(title:String, blurb: String, candidates: List[String])(implicit flash: Flash)
+@(title:String, blurb: String, candidates: List[String], voters: List[String])(implicit flash: Flash)
 
 @main(title) {
     <h1>@title</h1>
@@ -6,9 +6,20 @@
         <p>Woop woop: @msg</p>
     }
     <p>@blurb</p>
+    <h2>Options</h2>
     <ul>
     @for(candidate <- candidates) {
         <li>@candidate</li>
     }
     </ul>
+    <h2>Current votes</h2>
+    @if(voters.isEmpty) {
+        <p>Nobody has voted yet.</p>
+    } else {
+        <ul>
+            @for(voter <- voters) {
+                <li>@voter</li>
+            }
+        </ul>
+    }
 }

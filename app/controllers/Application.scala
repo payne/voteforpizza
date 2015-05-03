@@ -24,7 +24,8 @@ object Application extends Controller {
       val name = first[String]("name")
       val desc = first[String]("description")
       val candidates = rows map (_("candidate"))
-      Ok(views.html.show(name, desc, candidates))
+      val voters: List[String] = DB.withConnection {implicit c => selectVoters(election)}
+      Ok(views.html.show(name, desc, candidates, voters))
     }
 
   }
@@ -51,7 +52,7 @@ object Application extends Controller {
       value => {
         Logger.debug("Yay")
         DB.withConnection { implicit c =>
-          val ballotId = insertBallot("foo").get
+          val ballotId = insertBallot(value.name, election).get
           insertPreferences(ids.zip(value.preferences), ballotId)
         }
         Redirect(routes.Application.show(election)).flashing("success" -> "Your vote has been recorded.")

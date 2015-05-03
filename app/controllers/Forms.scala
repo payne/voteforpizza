@@ -19,7 +19,8 @@ object Forms {
     }
     Form(
       mapping(
-        "preferences" -> list(number)
+        "preferences" -> list(number),
+        "name" -> text(maxLength=100)
       )(Ballot.apply)(Ballot.unapply) verifying(
         "Ranking is not complete",
         fields => validateRankingIsComplete(fields.preferences)
@@ -34,8 +35,8 @@ object Forms {
         "candidates" -> list(text).transform(filterNonEmpty, identity[List[String]]).verifying(
           "Two or more items required", _.size >= 2
         ),
-        "name" -> nonEmptyText,
-        "description" -> text
+        "name" -> nonEmptyText(maxLength=200),
+        "description" -> text(maxLength=1000)
       )(Election.apply)(Election.unapply)
     )
   }
