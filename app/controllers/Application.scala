@@ -16,25 +16,32 @@ import anorm.SqlParser._
 
 
 object Application extends Controller {
-  val candidates = List("foo", "bar", "baz")
   case class Ballot(preferences: List[Int])
+  case class DisplayOrder(candidateIds: List[Int])
   case class Election(candidates: List[String], name: String, description: String)
 
-  def validateRankingIsComplete(preferences: List[Int]): Boolean = {
-    val received = preferences.sorted.toList
-    val expected = 1.to(candidates.length).toList
-    Logger.debug(received.toString)
-    Logger.debug(expected.toString)
-    received == expected
+  def voteForm(candidates: List[String]) = {
+    def validateRankingIsComplete(preferences: List[Int]): Boolean = {
+      val received = preferences.sorted.toList
+      val expected = 1.to(candidates.length).toList
+      Logger.debug(received.toString)
+      Logger.debug(expected.toString)
+      received == expected
+    }
+    Form(
+      mapping(
+        "preferences" -> list(number)
+      )(Ballot.apply)(Ballot.unapply) verifying(
+        "Ranking is not complete",
+        fields => validateRankingIsComplete(fields.preferences)
+        )
+    )
   }
 
-  val voteForm: Form[Ballot] = Form(
+  val voteDisplayOrderForm: Form[DisplayOrder] = Form(
     mapping(
-      "preferences" -> list(number)
-    )(Ballot.apply)(Ballot.unapply) verifying(
-      "Ranking is not complete",
-      fields => validateRankingIsComplete(fields.preferences)
-    )
+      "displayOrder" -> list(number)
+    )(DisplayOrder.apply)(DisplayOrder.unapply)
   )
 
   val electionForm: Form[Election] = {
@@ -55,13 +62,7 @@ object Application extends Controller {
   }
 
   def show(election: Long) = Action { implicit request =>
-    val sql = SQL"""
-      select e.name, e.description, c.name as candidate
-      from Election e INNER JOIN Candidate c ON (e.Id = c.electionId)
-      where e.id = $election
-      order by random()
-    """
-    val rows = DB.withConnection {implicit c => sql().toList}
+    val rows: List[Row] = getCandidates(election)
     if(rows.isEmpty) {
       NotFound
     } else {
@@ -74,12 +75,40 @@ object Application extends Controller {
 
   }
 
+  def getCandidates(election: Long): List[Row] = {
+    val sql = SQL"""
+      select e.name, e.description, c.name as candidate, c.id as candidateId
+      from Election e INNER JOIN Candidate c ON (e.Id = c.electionId)
+      where e.id = $election
+      order by c.id
+    """
+    DB.withConnection { implicit c => sql().toList}
+  }
+
   def showVoteForm(election: Long) = Action {
-    Ok(views.html.voteForm(election, "Test Vote", candidates, voteForm))
+    val rows = getCandidates(election)
+    val candidates = rows.map(_[String]("candidate"))
+    val ids: List[Int] = rows.map(_[Int]("candidateId"))
+    Ok(views.html.voteForm(election, rows.head[String]("name"), candidates, voteForm(candidates)))
   }
 
   def vote(election: Long) = Action { implicit request =>
-    voteForm.bindFromRequest.fold(
+    val rows = getCandidates(election)
+    val candidates = rows.map(_[String]("candidate"))
+    val ids = rows.map(_[Int]("candidateId"))
+    def insertBallot(name: String)(implicit c: Connection): Option[Long] = {
+      SQL"insert into Ballot(name) values($name)".executeInsert()
+    }
+
+    def insertPreferences(ranking: Seq[(Int, Int)], ballotId: Long)(implicit c: Connection): Array[Int] = {
+        BatchSql(
+          SQL("insert into Preference(candidateId, ballotId, rank) values ({candidateId}, {ballotId}, {rank})"),
+          for ((candidateId, rank) <- ranking)
+          yield Seq[NamedParameter]("candidateId" -> candidateId, "rank" -> rank, "ballotId" -> ballotId)
+        ).execute() // Throws SQLExceptions
+    }
+
+    voteForm(candidates).bindFromRequest.fold(
       formWithErrors => {
         Logger.debug("Oh no")
         Logger.debug(formWithErrors.errorsAsJson(Lang("en")).toString)
@@ -88,6 +117,10 @@ object Application extends Controller {
       },
       value => {
         Logger.debug("Yay")
+        DB.withConnection { implicit c =>
+          val ballotId = insertBallot("foo").get
+          insertPreferences(ids.zip(value.preferences), ballotId)
+        }
         Redirect(routes.Application.show(election)).flashing("success" -> "Your vote has been recorded.")
       }
     )
