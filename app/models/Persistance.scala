@@ -28,6 +28,19 @@ object Persistance {
     sql.as(scalar[String].*)
   }
 
+  def selectBallots(election: Long)(implicit c: Connection): Map[Long, List[Row]] = {
+    val sql = SQL"""
+      select
+        p.ballotId,
+        p.candidateId,
+        p.rank
+      from ballot b inner join preference p on (p.ballotId = b.id)
+      where b.electionId = $election
+      order by p.ballotId, p.rank
+    """
+    sql().toList.groupBy(_[Long]("ballotId"))
+  }
+
   def insertBallot(name: String, electionId: Long)(implicit c: Connection): Option[Long] = {
       SQL"insert into Ballot(name, electionId) values($name, $electionId)".executeInsert()
   }

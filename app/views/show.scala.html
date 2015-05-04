@@ -1,4 +1,4 @@
-@(title:String, blurb: String, candidates: List[String], voters: List[String])(implicit flash: Flash)
+@(election: Long, title:String, blurb: String, candidates: List[String], voters: List[String])(implicit flash: Flash)
 
 @main(title) {
     <h1>@title</h1>
@@ -21,5 +21,9 @@
                 <li>@voter</li>
             }
         </ul>
+    }
+    <h2>Results</h2>
+    @helper.form(action = routes.Application.count(election)) {
+        <input type="submit" value="Count Votes"/>
     }
 }
