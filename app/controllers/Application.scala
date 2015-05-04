@@ -11,7 +11,7 @@ import play.api.Play.current
 object Application extends Controller {
 
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Redirect(routes.Application.showNewElectionForm)
   }
 
   def show(election: Long) = Action { implicit request =>
@@ -25,7 +25,7 @@ object Application extends Controller {
       val candidates = rows map (_("candidate"))
       val voters: List[String] = DB.withConnection {implicit c => selectVoters(election)}
       val counts: List[List[Row]] = DB.withConnection {implicit c => selectCounts(election)}
-      Ok(views.html.show(election, name, desc, candidates, voters, counts))
+      Ok(views.html.show(election, name, desc, candidates, voters, counts, Forms.countForm))
     }
 
   }
@@ -60,26 +60,40 @@ object Application extends Controller {
     )
   }
 
-  def count(election: Long) = Action {
-    val rows: List[Row] = DB.withConnection {implicit c => selectCandidates(election)}
-    val candidateIdMap = (for(row <- rows) yield (row[Long]("candidateId"), stv.Candidate(row[String]("candidate")))).toMap
-    val ballots = DB.withConnection {implicit c=> selectBallots(election)}
-    val electionObj = stv.Election(candidateIdMap.values.toSet, seats=1)
-    def rankingFromRows(rows: List[Row]) = {
-      (for(row <- rows) yield candidateIdMap(row[Long]("candidateId"))).toList
-    }
-    val electionWithVotes = ballots.values.foldLeft(electionObj) {(el: stv.Election, rows: List[Row]) =>
-      el.vote(rankingFromRows(rows))
-    }
-    val count = stv.SomeCount(electionWithVotes)
-    for (round <- count.roundCounts) {
-      Logger.info(round.toString)
-      Logger.info(round.isFinal.toString)
-      Logger.info(round.hopefuls.size.toString)
-    }
+  def count(election: Long) = Action { implicit request =>
+    Forms.countForm.bindFromRequest.fold(
+      formWithErrors => {
+        Logger.debug("Oh no")
+        Logger.debug(formWithErrors.errorsAsJson(Lang("en")).toString)
+        Redirect(routes.Application.show(election)).flashing("error" -> "Invalid number of seats.")
+      },
+      seats => {
+        Logger.info(seats.toString)
+        val rows: List[Row] = DB.withConnection {implicit c => selectCandidates(election)}
+        val candidateIdMap = (for(row <- rows) yield (row[Long]("candidateId"), stv.Candidate(row[String]("candidate")))).toMap
+        val ballots = DB.withConnection {implicit c=> selectBallots(election)}
+        val electionObj = stv.Election(candidateIdMap.values.toSet, seats=seats)
+        Logger.info(electionObj.seats.toString)
+        def rankingFromRows(rows: List[Row]) = {
+          (for(row <- rows) yield candidateIdMap(row[Long]("candidateId"))).toList
+        }
+        if(ballots.isEmpty) {
+          Redirect(routes.Application.show(election)).flashing("error" -> "Nothing to count.")
+        } else {
+          val electionWithVotes = ballots.values.foldLeft(electionObj) { (el: stv.Election, rows: List[Row]) =>
+            el.vote(rankingFromRows(rows))
+          }
+          Logger.info(electionWithVotes.seats.toString)
+          val count = stv.SomeCount(electionWithVotes)
+          for (round <- count.roundCounts) {
+            Logger.info(round.toString)
+          }
 
-    DB.withConnection {implicit c => insertCount(election, electionWithVotes.seats, count.roundCounts, candidateIdMap.map(_.swap))}
-    Redirect(routes.Application.show(election)).flashing("success" -> "Election has been counted.")
+          DB.withConnection { implicit c => insertCount(election, electionWithVotes.seats, count.roundCounts, candidateIdMap.map(_.swap))}
+          Redirect(routes.Application.show(election)).flashing("success" -> "Election has been counted.")
+        }
+      }
+    )
   }
 
   def showNewElectionForm() = Action {

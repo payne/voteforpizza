@@ -44,6 +44,7 @@ object Persistance {
   def selectCounts(election: Long)(implicit c: Connection): List[List[Row]] = {
     val sql = SQL"""
       select
+        c.seats,
         d.candidateId,
         ca.name as candidateName,
         d.countId,
@@ -54,7 +55,7 @@ object Persistance {
       inner join ElectionCountDetail d on (d.countId = c.id)
       inner join Candidate ca on (d.candidateId = ca.id)
       where c.electionId = $election
-      order by d.countId, d.round, ca.name
+      order by d.countId, d.round, ca.id
     """
     // This sucks :(
     def groupByColumn(rows: List[Row], column: String): List[List[Row]] = {

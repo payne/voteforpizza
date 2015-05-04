@@ -1,9 +1,20 @@
-@(election: Long, title:String, blurb: String, candidates: List[String], voters: List[String], counts:List[List[anorm.Row]])(implicit flash: Flash)
+@(
+    election: Long,
+    title:String,
+    blurb: String,
+    candidates: List[String],
+    voters: List[String],
+    counts:List[List[anorm.Row]],
+    countForm: Form[Int]
+)(implicit flash: Flash)
 
 @main(title) {
     <h1>@title</h1>
     @for( msg <- flash.get("success")) {
         <p>Woop woop: @msg</p>
+    }
+    @for( msg <- flash.get("error")) {
+    <p>Oops! @msg</p>
     }
     <p>@blurb</p>
     <h2>Options</h2>
@@ -13,6 +24,7 @@
     }
     </ul>
     <h2>Current votes</h2>
+        <a href="@routes.Application.showVoteForm(election)">Vote</a>
     @if(voters.isEmpty) {
         <p>Nobody has voted yet.</p>
     } else {
@@ -24,13 +36,14 @@
     }
     <h2>Results</h2>
     @helper.form(action = routes.Application.count(election)) {
+        @helper.inputText(countForm("seats"), '_label -> "# Places")
         <input type="submit" value="Count Votes"/>
     }
-    <h2>Counts</h2>
     @if(counts.isEmpty) {
         <p>Not counted yet.</p>
     } else {
         @for(count <- counts) {
+            <h3>@count.head[Int]("seats") place result</h3>
             <table>
                 <thead>
                 <tr>

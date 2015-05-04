@@ -40,4 +40,9 @@ object Forms {
       )(Election.apply)(Election.unapply)
     )
   }
+
+  val countForm: Form[Int] = Form(
+    mapping(
+      "seats" -> number(min=1)
+    )(identity[Int])(Some[Int](_)))
 }
