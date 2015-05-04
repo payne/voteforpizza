@@ -1,4 +1,4 @@
-@(election: Long, title:String, blurb: String, candidates: List[String], voters: List[String])(implicit flash: Flash)
+@(election: Long, title:String, blurb: String, candidates: List[String], voters: List[String], counts:List[List[anorm.Row]])(implicit flash: Flash)
 
 @main(title) {
     <h1>@title</h1>
@@ -25,5 +25,32 @@
     <h2>Results</h2>
     @helper.form(action = routes.Application.count(election)) {
         <input type="submit" value="Count Votes"/>
+    }
+    <h2>Counts</h2>
+    @if(counts.isEmpty) {
+        <p>Not counted yet.</p>
+    } else {
+        @for(count <- counts) {
+            <table>
+                <thead>
+                <tr>
+                    <th>Round</th>
+                    <th>Option</th>
+                    <th>Votes</th>
+                    <th>Elected?</th>
+                    <th>Eliminated?</th>
+                </tr>
+                </thead>
+            @for(row <- count) {
+                <tr>
+                    <td>@row[Long]("round")</td>
+                    <td>@row[String]("candidateName")</td>
+                    <td>@row[Int]("voteCount")</td>
+                    <td>@if(row[Boolean]("isElected")) {Yes} else {No}</td>
+                    <td>@if(row[Int]("voteCount") == 0) {Yes} else {No}</td>
+                </tr>
+            }
+            </table>
+        }
     }
 }

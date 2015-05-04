@@ -41,6 +41,75 @@ object Persistance {
     sql().toList.groupBy(_[Long]("ballotId"))
   }
 
+  def selectCounts(election: Long)(implicit c: Connection): List[List[Row]] = {
+    val sql = SQL"""
+      select
+        d.candidateId,
+        ca.name as candidateName,
+        d.countId,
+        d.round,
+        d.isElected,
+        d.voteCount
+      from ElectionCount c
+      inner join ElectionCountDetail d on (d.countId = c.id)
+      inner join Candidate ca on (d.candidateId = ca.id)
+      where c.electionId = $election
+      order by d.countId, d.round, ca.name
+    """
+    // This sucks :(
+    def groupByColumn(rows: List[Row], column: String): List[List[Row]] = {
+      if(rows.isEmpty) {
+        List()
+      } else {
+        val firstGroup = rows.head[Long](column)
+        val (firstGroupRows, otherGroupRows) = rows.span(_[Long](column) == firstGroup)
+        if(otherGroupRows.isEmpty) {
+          List(firstGroupRows)
+        } else {
+          firstGroupRows :: groupByColumn(otherGroupRows, column)
+        }
+      }
+    }
+    val allRows = sql().toList
+    val countRows = groupByColumn(allRows, "countId")
+    //countRows map {groupByColumn(_, "round")}
+    countRows
+  }
+
+  // TODO create a model object that maps election results to candidate IDs
+  // so we don't have to deal with it here
+  def insertCount(electionId: Long, seats: Int, rounds: List[stv.ElectionResult], candidateMap: Map[stv.Candidate, Long])(implicit c: Connection) = {
+    def insertCount: Option[Long] = {
+      SQL"insert into ElectionCount(electionId, seats) values($electionId, $seats)".executeInsert()
+    }
+    def insertDetail(countId: Long) = {
+      BatchSql(
+        SQL("insert into ElectionCountDetail(countId, round, candidateId, isElected, voteCount) values({countId}, {round}, {candidateId}, {isElected}, {voteCount})"),
+        for (
+          roundDetail <- rounds.zipWithIndex;
+          candidateResult <- (roundDetail._1.elected ++ roundDetail._1.hopefuls ++ roundDetail._1.eliminated);
+          candidateId = (candidateResult match {
+            case stv.ElectedCandidate(candidate, _) => candidateMap(candidate)
+            case stv.HopefulCandidate(candidate, _) => candidateMap(candidate)
+            case stv.EliminatedCandidate(candidate) => candidateMap(candidate)
+          });
+          voteCount = (candidateResult match {
+            case stv.ElectedCandidate(_, votes) => votes.length
+            case stv.HopefulCandidate(_, votes) => votes.length
+            case stv.EliminatedCandidate(_) => 0
+          })
+        ) yield Seq[NamedParameter](
+          "round" -> (roundDetail._2 + 1),
+          "countId" -> countId,
+          "isElected" -> (candidateResult match {case stv.ElectedCandidate(_, _) => true; case _ => false}),
+          "voteCount" -> voteCount,
+          "candidateId" -> candidateId
+        )
+      ).execute()
+    }
+    insertDetail(insertCount.get)
+  }
+
   def insertBallot(name: String, electionId: Long)(implicit c: Connection): Option[Long] = {
       SQL"insert into Ballot(name, electionId) values($name, $electionId)".executeInsert()
   }

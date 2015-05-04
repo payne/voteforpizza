@@ -24,7 +24,8 @@ object Application extends Controller {
       val desc = first[String]("description")
       val candidates = rows map (_("candidate"))
       val voters: List[String] = DB.withConnection {implicit c => selectVoters(election)}
-      Ok(views.html.show(election, name, desc, candidates, voters))
+      val counts: List[List[Row]] = DB.withConnection {implicit c => selectCounts(election)}
+      Ok(views.html.show(election, name, desc, candidates, voters, counts))
     }
 
   }
@@ -76,7 +77,9 @@ object Application extends Controller {
       Logger.info(round.isFinal.toString)
       Logger.info(round.hopefuls.size.toString)
     }
-    Ok("ok")
+
+    DB.withConnection {implicit c => insertCount(election, electionWithVotes.seats, count.roundCounts, candidateIdMap.map(_.swap))}
+    Redirect(routes.Application.show(election)).flashing("success" -> "Election has been counted.")
   }
 
   def showNewElectionForm() = Action {
