@@ -43,7 +43,26 @@
         <p>Not counted yet.</p>
     } else {
         @for(count <- counts) {
+            @defining(
+                (for(
+                    row <- count
+                    if row[Boolean]("isElected")
+                ) yield row[String]("candidateName")).toSet
+            ) { winners =>
             <h3>@count.head[Int]("seats") place result</h3>
+            <h4>Summary</h4>
+            @if(winners.isEmpty) {
+                <p>No result.</p>
+            } else {
+                <ul>
+                    @for(
+                        candidateName:String <- winners
+                    ) {
+                        <li>@candidateName</li>
+                    }
+                </ul>
+            }
+            <h4>Details</h4>
             <table>
                 <thead>
                 <tr>
@@ -62,6 +81,7 @@
                     <td>@if(row[Boolean]("isElected")) {Yes} else {No}</td>
                     <td>@if(row[Int]("voteCount") == 0) {Yes} else {No}</td>
                 </tr>
+            }
             }
             </table>
         }
