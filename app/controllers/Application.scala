@@ -84,7 +84,7 @@ object Application extends Controller {
             el.vote(rankingFromRows(rows))
           }
           Logger.info(electionWithVotes.seats.toString)
-          val count = stv.SomeCount(electionWithVotes)
+          val count = stv.RepeatedIRVCount(electionWithVotes)
           for (round <- count.roundCounts) {
             Logger.info(round.toString)
           }
