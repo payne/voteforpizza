@@ -15,15 +15,15 @@ object Forms {
       val expected = 1.to(candidates.length).toList
       Logger.debug(received.toString)
       Logger.debug(expected.toString)
-      received == expected
+      received.length > 0 && received.zip(expected).forall(pair => pair._1 == pair._2)
     }
     Form(
       mapping(
-        "preferences" -> list(number),
+        "preferences" -> list(optional(number)),
         "name" -> text(maxLength=100)
       )(Ballot.apply)(Ballot.unapply) verifying(
         "Ranking is not complete",
-        fields => validateRankingIsComplete(fields.preferences)
+        fields => validateRankingIsComplete(fields.preferences.collect{case Some(x) => x})
         )
     )
   }

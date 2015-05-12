@@ -3,8 +3,9 @@
 
 @main(title) {
     <h1>@title Ballot</h1>
-    @if(form.hasGlobalErrors) {
+    @if(form.hasErrors) {
     <p>My hovercraft is full of errors!</p>
+    <p>Please follow instructions to correct the problem. Thank you for your cooperation.</p>
     <ul>
         @for(error <- form.globalErrors) {
             <li>@error.message</li>
@@ -15,6 +16,7 @@
         @helper.inputText(form("name"), '_label -> "Your Name")
         <fieldset>
             <p>Rank each option from 1 to @candidates.length.</p>
+            <p>1 = QUITE GOOD</p><p>@candidates.length = RATHER POOR</p>
         @for((candidate, idx) <- candidates.zipWithIndex) {
             @helper.input(form("preferences")("[" + idx + "]"), '_label -> candidate) { (id, name, value, args) =>
                 <input type="number" name="@name" id="@id" @toHtmlArgs(args) />

@@ -115,11 +115,14 @@ object Persistance {
       SQL"insert into Ballot(name, electionId) values($name, $electionId)".executeInsert()
   }
 
-  def insertPreferences(ranking: Seq[(Int, Int)], ballotId: Long)(implicit c: Connection): Array[Int] = {
+  def insertPreferences(ranking: Seq[(Int, Option[Int])], ballotId: Long)(implicit c: Connection): Array[Int] = {
     BatchSql(
       SQL("insert into Preference(candidateId, ballotId, rank) values ({candidateId}, {ballotId}, {rank})"),
-      for ((candidateId, rank) <- ranking)
-      yield Seq[NamedParameter]("candidateId" -> candidateId, "rank" -> rank, "ballotId" -> ballotId)
+      for {
+        (candidateId, rank) <- ranking
+        if (rank.isDefined)
+      }
+      yield Seq[NamedParameter]("candidateId" -> candidateId, "rank" -> rank.get, "ballotId" -> ballotId)
     ).execute() // Throws SQLExceptions
   }
 
